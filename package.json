@@ -6,9 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:migrate": "node scripts/run-schema.mjs"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.35",
+    "@neondatabase/serverless": "^0.9.4",
+    "@vercel/blob": "^0.23.4",
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -18,10 +22,10 @@
     "@types/node": "^20.14.10",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^15.1.0",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
-    "typescript": "^5.5.2",
-    "eslint": "^8.57.0",
-    "eslint-config-next": "^15.1.0"
+    "typescript": "^5.5.2"
   }
 }

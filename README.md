@@ -17,7 +17,8 @@ An asynchronous recorded screening platform designed for modern hiring. Candidat
 
 - **Frontend/Backend**: Next.js 15 (App Router) + TypeScript
 - **Styling**: Tailwind CSS
-- **Database & Storage**: Supabase (PostgreSQL, Storage buckets for video blobs, Row-Level Security)
+- **Database**: Neon (serverless PostgreSQL)
+- **Storage**: Vercel Blob (video blobs)
 - **Speech-to-Text**: Deepgram Nova (for fast, accurate batch transcription)
 - **LLM**: Claude 3.5 Sonnet (for question generation and rubric grading)
 
@@ -26,13 +27,14 @@ An asynchronous recorded screening platform designed for modern hiring. Candidat
 ## 📂 Repository Structure
 
 ```
-├── docs/                      # Build roadmaps and design plans
+├── PLAN.md                    # Phased build roadmap (read before starting any phase)
 ├── src/
 │   ├── app/                   # Next.js App Router pages and layouts
-│   │   ├── layout.tsx         # Root layout configuration
-│   │   ├── page.tsx           # Premium landing page
-│   │   └── globals.css        # Global CSS and Tailwind setup
+│   └── lib/
+│       ├── agents/            # Contracts + adapters for the JD parser, resume parser, readiness matcher
+│       ├── db.ts               # Neon Postgres client
 ├── CLAUDE.md                  # LLM agent instructions & constraints
+├── schema.sql                 # Neon Postgres schema
 ├── next.config.ts             # Next.js configuration
 ├── tailwind.config.ts         # Tailwind configuration
 └── tsconfig.json              # TypeScript configuration

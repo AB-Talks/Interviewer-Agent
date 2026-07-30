@@ -2,13 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design tokens ported from ABtalksapp (the main website this app will
+ * eventually be merged into) so the two share a visual language ahead of
+ * that merge. Token values only -- not ABtalksapp's shadcn/Base UI component
+ * library or Tailwind v4 tooling, which are out of scope here.
+ */
 :root {
-  --background: #0f172a;
-  --foreground: #f8fafc;
+  --background: 38 38% 98%;
+  --foreground: 224 71% 4%;
+  --card: 0 0% 100%;
+  --card-foreground: 224 71% 4%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 224 71% 4%;
+  --primary: 239 84% 67%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 14% 96%;
+  --secondary-foreground: 224 71% 4%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 220 8% 46%;
+  --accent: 220 14% 96%;
+  --accent-foreground: 224 71% 4%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 239 84% 67%;
+  --radius: 0.625rem;
 }
 
-body {
-  color: var(--foreground);
-  background-color: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+.dark {
+  --background: 224 71% 4%;
+  --foreground: 0 0% 98%;
+  --card: 224 71% 6%;
+  --card-foreground: 0 0% 98%;
+  --popover: 224 71% 6%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 239 84% 67%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 215 28% 17%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 215 28% 17%;
+  --muted-foreground: 217 11% 65%;
+  --accent: 215 28% 17%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 63% 31%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 215 28% 17%;
+  --input: 215 28% 17%;
+  --ring: 239 84% 67%;
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
