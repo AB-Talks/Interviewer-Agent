@@ -25,13 +25,50 @@ type Phase =
   | "live"
   | "ending"
   | "done"
-  | "error";
+  | "error"
+  | "offer_preview";
 
 interface TranscriptLine {
   role: "ai" | "candidate";
   text: string;
   ts: number;
   latencyMs?: number;
+}
+
+// Round-tripped through the client for the TEMPORARY text-preview mode (see
+// /api/interviews/[token]/turn) -- that route is otherwise stateless.
+interface TurnState {
+  questionIndex: number;
+  followUpCount: number;
+  stuckCoreCount: number;
+  coreAnsweredCount: number;
+}
+
+interface TurnLabel {
+  text: string;
+  kind: "core" | "probe" | "followup" | "closing";
+}
+
+// Minimal ambient shape for the (non-standard, webkit-prefixed) Web Speech
+// API -- not part of TS's default DOM lib. Used only for the optional
+// dictation convenience in text-preview mode.
+interface SpeechRecognitionResultLike {
+  isFinal: boolean;
+  0: { transcript: string };
+}
+interface SpeechRecognitionEventLike {
+  resultIndex: number;
+  results: { length: number; [index: number]: SpeechRecognitionResultLike };
+}
+interface SpeechRecognition {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((e: SpeechRecognitionEventLike) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  start: () => void;
+  stop: () => void;
 }
 
 export default function LiveInterviewPage({
@@ -47,6 +84,18 @@ export default function LiveInterviewPage({
   const [secondsElapsed, setSecondsElapsed] = useState(0);
   const [transcriptCount, setTranscriptCount] = useState(0);
   const [interviewId, setInterviewId] = useState<string | null>(null);
+
+  // TEMPORARY text-preview mode (see /api/interviews/[token]/turn) -- used
+  // only while OPENAI_API_KEY has no billing attached, so the team can walk
+  // through the interview flow without the live voice call.
+  const [textPreviewMode, setTextPreviewMode] = useState(false);
+  const [currentTurn, setCurrentTurn] = useState<TurnLabel | null>(null);
+  const [answerDraft, setAnswerDraft] = useState("");
+  const [turnBusy, setTurnBusy] = useState(false);
+  const [dictating, setDictating] = useState(false);
+  const turnStateRef = useRef<TurnState | null>(null);
+  const lastQuestionIdRef = useRef<string | null>(null);
+  const recognitionRef = useRef<{ stop: () => void } | null>(null);
 
   const proctorEnabled = phase === "ready" || phase === "connecting" || phase === "live";
   const { push: pushProctorEvent } = useProctor(token, proctorEnabled);
@@ -326,11 +375,14 @@ export default function LiveInterviewPage({
     try {
       const sessionRes = await fetch(`/api/interviews/${token}/session`, { method: "POST" });
       const sessionJson = await sessionRes.json();
-      if (!sessionJson.ok) {
-        throw new Error(sessionJson.message ?? "Could not start the interview session.");
-      }
-      if (!sessionJson.data?.clientSecret) {
-        throw new Error("Could not start the interview session.");
+      if (!sessionJson.ok || !sessionJson.data?.clientSecret) {
+        // Live voice isn't available yet (most commonly: OPENAI_API_KEY has no
+        // billing attached). Offer the text-preview fallback instead of a
+        // dead-end error -- this is a deliberate, clearly-labeled substitute,
+        // never a silent one.
+        setErrorMessage(sessionJson.message ?? "Could not start the interview session.");
+        setPhase("offer_preview");
+        return;
       }
       const clientSecret: string = sessionJson.data.clientSecret;
 
@@ -449,14 +501,30 @@ export default function LiveInterviewPage({
           "Content-Type": "application/sdp",
         },
       });
-      if (!sdpRes.ok) throw new Error("WebRTC connection failed.");
+      if (!sdpRes.ok) {
+        const status = sdpRes.status;
+        throw new Error(
+          status === 429
+            ? "The live voice interviewer is rate-limited or over quota (check OpenAI billing)."
+            : `WebRTC connection failed (${status}).`,
+        );
+      }
       const answerSdp = await sdpRes.text();
       await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
     } catch (err) {
+      // Any failure past this point means a client secret was minted but the
+      // live call itself couldn't be established (most commonly a quota/
+      // billing issue) -- offer the text-preview fallback rather than
+      // silently dumping back to "ready" with an error nobody sees. Only tear
+      // down the failed WebRTC attempt here, NOT the camera/mic stream --
+      // startTextPreview() below needs it still running.
       const message = err instanceof Error ? err.message : "Connection failed.";
-      setErrorMessage(`${message} Check your connection and try again.`);
-      setPhase("ready");
-      stopEverything();
+      setErrorMessage(message);
+      setPhase("offer_preview");
+      dcRef.current?.close();
+      dcRef.current = null;
+      pcRef.current?.close();
+      pcRef.current = null;
     }
   }, [
     interviewId,
@@ -466,10 +534,140 @@ export default function LiveInterviewPage({
     startSilenceWatch,
     pushTranscript,
     pushProctorEvent,
-    stopEverything,
   ]);
 
+  function turnLabel(kind: "core" | "probe" | null, isFollowUp: boolean, ended: boolean): TurnLabel["kind"] {
+    if (ended) return "closing";
+    if (isFollowUp) return "followup";
+    return kind === "probe" ? "probe" : "core";
+  }
 
+  // ---- TEMPORARY text-preview mode: same flow, but the "AI" side is a
+  // Gemini text turn-by-turn engine instead of the live OpenAI voice call.
+  // No AI voice output -- see /api/interviews/[token]/turn. ----
+  const startTextPreview = useCallback(async () => {
+    if (!localStreamRef.current || !interviewId) return;
+    setTextPreviewMode(true);
+    setPhase("connecting");
+    endedRef.current = false;
+    transcriptRef.current = [];
+    segmentSeqRef.current = 0;
+    turnStateRef.current = null;
+    lastQuestionIdRef.current = null;
+
+    // Recording still runs (video + candidate mic) for proctoring/review
+    // parity -- there's just no remote AI audio to mix in this mode.
+    const videoTrack = localStreamRef.current.getVideoTracks()[0];
+    const micTrack = localStreamRef.current.getAudioTracks()[0];
+    const tracks = [videoTrack, micTrack].filter((t): t is MediaStreamTrack => Boolean(t));
+    const recordedStream = new MediaStream(tracks);
+    recordedStreamRef.current = recordedStream;
+    startNewSegment(recordedStream);
+    segmentTimerRef.current = setInterval(rotateSegment, SEGMENT_DURATION_MS);
+
+    const ctx = new AudioContext();
+    audioCtxRef.current = ctx;
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 512;
+    ctx.createMediaStreamSource(localStreamRef.current).connect(analyser);
+    analyserRef.current = analyser;
+    startSilenceWatch();
+
+    if (localVideoElRef.current) {
+      import("@/lib/interview/faceDetector")
+        .then(({ startFaceWatch }) => {
+          if (localVideoElRef.current) {
+            faceWatchStopRef.current = startFaceWatch(localVideoElRef.current, pushProctorEvent);
+          }
+        })
+        .catch(() => {
+          console.warn("[interview] face-presence proctoring unavailable (dependency not installed)");
+        });
+    }
+
+    startedAtRef.current = Date.now();
+
+    try {
+      const res = await fetch(`/api/interviews/${token}/turn`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.message ?? "Could not start the preview.");
+      turnStateRef.current = json.data.state;
+      lastQuestionIdRef.current = json.data.questionId;
+      setCurrentTurn({ text: json.data.aiText, kind: turnLabel(json.data.kind, false, json.data.ended) });
+      pushTranscript({ role: "ai", text: json.data.aiText, ts: Date.now() });
+      setPhase("live");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not start the preview.";
+      setErrorMessage(message);
+      setPhase("ready");
+      stopEverything();
+    }
+  }, [interviewId, token, startNewSegment, rotateSegment, startSilenceWatch, pushProctorEvent, pushTranscript, stopEverything]);
+
+  const submitTextAnswer = useCallback(async () => {
+    if (turnBusy || !turnStateRef.current) return;
+    const answerText = answerDraft.trim();
+    setTurnBusy(true);
+    if (answerText) pushTranscript({ role: "candidate", text: answerText, ts: Date.now() });
+    setAnswerDraft("");
+
+    try {
+      const res = await fetch(`/api/interviews/${token}/turn`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: turnStateRef.current, answerText }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.message ?? "Could not submit your answer.");
+      const isFollowUp = json.data.questionId === lastQuestionIdRef.current && !json.data.ended;
+      turnStateRef.current = json.data.state;
+      lastQuestionIdRef.current = json.data.questionId;
+      setCurrentTurn({ text: json.data.aiText, kind: turnLabel(json.data.kind, isFollowUp, json.data.ended) });
+      pushTranscript({ role: "ai", text: json.data.aiText, ts: Date.now() });
+      setTurnBusy(false);
+      if (json.data.ended) {
+        void endInterview();
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not submit your answer.";
+      setErrorMessage(message);
+      setTurnBusy(false);
+    }
+  }, [token, turnBusy, answerDraft, pushTranscript, endInterview]);
+
+  // Optional dictation convenience for the answer box -- browser speech-to-text
+  // only, no AI voice involved. No-ops silently if unsupported.
+  const toggleDictation = useCallback(() => {
+    if (dictating) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const SpeechRecognitionCtor =
+      (window as unknown as { SpeechRecognition?: new () => SpeechRecognition; webkitSpeechRecognition?: new () => SpeechRecognition })
+        .SpeechRecognition ??
+      (window as unknown as { webkitSpeechRecognition?: new () => SpeechRecognition }).webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) return;
+    const rec = new SpeechRecognitionCtor();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = "en-US";
+    rec.onresult = (e) => {
+      let finalText = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
+      }
+      if (finalText) setAnswerDraft((prev) => (prev ? `${prev} ${finalText}` : finalText));
+    };
+    rec.onend = () => setDictating(false);
+    rec.onerror = () => setDictating(false);
+    rec.start();
+    recognitionRef.current = rec;
+    setDictating(true);
+  }, [dictating]);
 
   // ---- Timer ----
   useEffect(() => {
@@ -489,62 +687,97 @@ export default function LiveInterviewPage({
   const canEndManually = phase === "live" && secondsElapsed >= MIN_MANUAL_END_SECONDS;
 
   return (
-    <div className="min-h-screen bg-background text-foreground py-10 px-6 flex flex-col items-center font-sans">
+    <div className="flex-1 py-10 px-6 flex flex-col items-center">
       <div className="w-full max-w-3xl space-y-6">
-        <div className="hidden md:block rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
+        <div className="hidden md:block rounded-[10px] border border-[#7364E6]/30 bg-[#7364E6]/10 px-4 py-3 text-sm text-white-70">
           For the best experience, use a laptop with headphones in a quiet room. This step is optimized for desktop.
         </div>
 
+        {textPreviewMode && (
+          <div className="rounded-[10px] border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 font-medium">
+            PREVIEW MODE — Gemini-powered text conversation. No live voice yet; this is not the final candidate experience.
+          </div>
+        )}
+
         {(phase === "checking_consent" || phase === "loading_media") && (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <span className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-            <p className="text-sm text-muted-foreground">
+            <span className="w-8 h-8 border-4 border-[#7364E6]/30 border-t-[#7364E6] rounded-full animate-spin" />
+            <p className="text-sm text-white-70">
               {phase === "checking_consent" ? "Checking your session..." : "Requesting camera & microphone access..."}
             </p>
           </div>
         )}
 
         {phase === "error" && (
-          <div className="bg-card border border-border rounded-3xl p-8 shadow-xl space-y-4 text-center">
-            <p className="text-destructive font-medium">{errorMessage}</p>
+          <div className="card-abtalks rounded-2xl p-8 space-y-4 text-center">
+            <p className="text-red-400 font-medium">{errorMessage}</p>
             <button
               onClick={() => {
                 setErrorMessage("");
                 setPhase("loading_media");
               }}
-              className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:opacity-90"
+              className="px-6 py-3 bg-[#7364E6] text-white rounded-[10px] font-semibold btn-abtalks"
             >
               Retry
             </button>
           </div>
         )}
 
+        {phase === "offer_preview" && (
+          <div className="card-abtalks rounded-2xl p-8 space-y-4 text-center">
+            <p className="text-white-70">
+              {errorMessage || "The live voice interviewer isn't connected yet."}
+            </p>
+            <p className="text-sm text-white-50">
+              You can continue with a text-based preview (powered by Gemini) to check the flow, or come back once
+              voice is set up.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+              <button
+                onClick={() => {
+                  setErrorMessage("");
+                  setPhase("ready");
+                }}
+                className="px-6 py-3 bg-[#403880] text-white border border-[#2C1BA9] rounded-[10px] font-semibold btn-abtalks"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void startTextPreview()}
+                className="px-6 py-3 bg-[#7364E6] text-white rounded-[10px] font-semibold btn-abtalks"
+              >
+                Continue in Text Preview
+              </button>
+            </div>
+          </div>
+        )}
+
         {(phase === "ready" || phase === "connecting" || phase === "live" || phase === "ending") && (
-          <div className="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+          <div className="card-abtalks rounded-2xl p-6 md:p-8 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="relative aspect-video rounded-2xl overflow-hidden bg-muted border border-border">
+              <div className="relative aspect-video rounded-xl overflow-hidden bg-[#191B40] border border-[#2C1BA9]/50">
                 <video ref={localVideoElRef} autoPlay playsInline muted className="w-full h-full object-cover" />
                 {phase === "live" && (
-                  <div className="absolute top-3 left-3 flex items-center gap-2 bg-destructive/90 text-destructive-foreground px-3 py-1 rounded-full text-xs font-semibold">
-                    <span className="w-2 h-2 rounded-full bg-destructive-foreground animate-pulse" />
+                  <div className="absolute top-3 left-3 flex items-center gap-2 bg-red-500/90 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
                     Live
                   </div>
                 )}
               </div>
-              <div className="flex flex-col justify-center items-center gap-3 rounded-2xl border border-border bg-secondary p-6 text-center">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              <div className="flex flex-col justify-center items-center gap-3 rounded-xl border border-[#2C1BA9]/50 bg-[#191B40]/80 p-6 text-center">
+                <span className="text-xs font-bold uppercase tracking-wider text-white-50">
                   {phase === "live" ? "Interview Status" : "Ready to begin"}
                 </span>
                 {phase === "live" ? (
                   <div className="space-y-1">
-                    <span className="flex items-center justify-center gap-2 text-emerald-600 dark:text-emerald-400 font-display text-2xl font-bold">
+                    <span className="flex items-center justify-center gap-2 text-emerald-400 font-display text-2xl font-bold">
                       <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
                       Session Active
                     </span>
-                    <p className="text-xs text-muted-foreground">{transcriptCount} conversation turns saved</p>
+                    <p className="text-xs text-white-50">{transcriptCount} conversation turns saved</p>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-white-70">
                     The interview will adapt to your background and responses.
                   </p>
                 )}
@@ -554,25 +787,70 @@ export default function LiveInterviewPage({
             {phase === "ready" && (
               <button
                 onClick={() => void startInterview()}
-                className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-semibold shadow-lg hover:opacity-90"
+                className="w-full py-4 rounded-[10px] btn-gradient font-semibold"
               >
-                Start Interview
+                Start Interview →
               </button>
             )}
             {phase === "connecting" && (
-              <p className="text-center text-sm text-muted-foreground">Connecting to your interviewer...</p>
+              <p className="text-center text-sm text-white-70">
+                {textPreviewMode ? "Preparing the preview..." : "Connecting to your interviewer..."}
+              </p>
             )}
+
+            {phase === "live" && textPreviewMode && currentTurn && (
+              <div className="border-t border-[#2C1BA9]/50 pt-6 space-y-4 text-left">
+                <div className="bg-[#191B40]/80 p-5 rounded-xl border border-[#2C1BA9]/50">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-white-50 mb-2">
+                    {currentTurn.kind === "core" && "Core Question"}
+                    {currentTurn.kind === "probe" && "Probe Question"}
+                    {currentTurn.kind === "followup" && "Follow-up"}
+                    {currentTurn.kind === "closing" && "Closing"}
+                  </h3>
+                  <p className="text-lg font-medium text-white">{currentTurn.text}</p>
+                </div>
+
+                {currentTurn.kind !== "closing" && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs font-bold uppercase tracking-wider text-white-50">Your answer</label>
+                      <button
+                        type="button"
+                        onClick={toggleDictation}
+                        className="text-xs text-[#7364E6] font-medium"
+                      >
+                        {dictating ? "● Stop dictation" : "Use microphone to dictate"}
+                      </button>
+                    </div>
+                    <textarea
+                      value={answerDraft}
+                      onChange={(e) => setAnswerDraft(e.target.value)}
+                      placeholder="Type your answer here..."
+                      className="w-full h-32 p-4 bg-[#191B40] border border-[#2C1BA9]/50 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#7364E6] text-white placeholder:text-white-50 resize-none"
+                    />
+                    <button
+                      onClick={() => void submitTextAnswer()}
+                      disabled={turnBusy}
+                      className="w-full py-4 rounded-[10px] btn-gradient font-semibold disabled:opacity-50"
+                    >
+                      {turnBusy ? "Thinking..." : "Submit Answer"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {phase === "live" && (
               <button
                 onClick={() => void endInterview()}
                 disabled={!canEndManually}
-                className="w-full py-4 bg-secondary disabled:opacity-50 text-secondary-foreground border border-border rounded-xl font-semibold hover:bg-accent"
+                className="w-full py-4 bg-[#403880] disabled:opacity-50 text-white border border-[#2C1BA9] rounded-[10px] font-semibold btn-abtalks"
               >
                 End Interview
               </button>
             )}
             {phase === "ending" && (
-              <p className="text-center text-sm text-muted-foreground">Saving your interview...</p>
+              <p className="text-center text-sm text-white-70">Saving your interview...</p>
             )}
           </div>
         )}

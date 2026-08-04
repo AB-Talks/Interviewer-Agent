@@ -1,5 +1,9 @@
 import type { Gap, SkillClaim, GenerationProfile } from "@/lib/agents/contracts";
-import { askClaudeJson } from "@/lib/anthropic";
+// TEMPORARY: OPENAI_API_KEY has no billing attached yet, so probe generation
+// is pointed at Gemini (lib/gemini.ts) for testing today. Swap back to
+// `askOpenAIJson` from "@/lib/openai" once OpenAI billing is set up --
+// CLAUDE.md's approved AI vendor is OpenAI only.
+import { askGeminiJson } from "@/lib/gemini";
 
 // Selection + generation of probe questions, per PLAN.md §6.2.
 // Cap 2, priority: (1) highest-severity non-blocking gap, (2) highest-value
@@ -80,7 +84,7 @@ async function generateOneProbe(
 ): Promise<GeneratedProbe | null> {
   const user = `ITEM TO PROBE:\n${JSON.stringify(item)}\n\nCANDIDATE CAPABILITY PROFILE (identity redacted):\n${JSON.stringify(profile)}`;
 
-  const result = await askClaudeJson<{ text: string; rationale: string }>({
+  const result = await askGeminiJson<{ text: string; rationale: string }>({
     system: PROBE_SYSTEM_PROMPT,
     user,
     maxTokens: 512,

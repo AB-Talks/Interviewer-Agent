@@ -1,13 +1,13 @@
 # Project rules
 - Next.js 15 App Router, TypeScript strict, Tailwind. No new deps without asking.
-- Neon Postgres + Vercel Blob is the backend. The only external AI services allowed
-  are the OpenAI Realtime API (live voice interview conduct) and the Anthropic API
-  (question/probe generation and post-interview evaluation). No other new services
-  without asking. @mediapipe/tasks-vision is the one pre-approved npm dependency,
-  for client-side face-presence proctoring only.
-- OPENAI_API_KEY and ANTHROPIC_API_KEY must never reach the client. The browser
-  only ever receives a short-lived OpenAI ephemeral client secret minted
-  server-side by /api/interviews/[token]/session.
+- Neon Postgres + Vercel Blob is the backend. The only external AI service allowed
+  is OpenAI (Realtime API for live voice interview conduct; Chat Completions for
+  question/probe generation and post-interview evaluation, via lib/openai.ts). No
+  other AI vendor or new service without asking. @mediapipe/tasks-vision is the
+  one pre-approved npm dependency, for client-side face-presence proctoring only.
+- OPENAI_API_KEY must never reach the client. The browser only ever receives a
+  short-lived OpenAI ephemeral client secret minted server-side by
+  /api/interviews/[token]/session.
 - The JD parser, resume parser, and readiness matcher are EXISTING services.
   Call them through lib/agents/*. Never write parsing or matching logic in this repo.
 - Never call getUserMedia anywhere -- landing, system-check, or interview page --

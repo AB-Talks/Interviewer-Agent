@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { parseJD } from "@/lib/agents/jdParser";
+import { generateCoreQuestions } from "@/lib/interview/coreQuestions";
 import { sqlQuery } from "@/lib/db";
 
 // Mock rubric template
@@ -63,30 +64,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to create job" }, { status: 500 });
     }
 
-    // 3. Generate 4 core questions from parsed JD (mock LLM generation)
-    const mockQuestions = parsedJD.mustHave.map((requirement, index) => ({
-      position: index + 1,
-      competency: requirement.key,
-      text: `Can you describe a challenging scenario where you had to leverage your skills in ${requirement.label}? What was the situation, your actions, and the outcome?`,
-      ideal_answer: `- Explain the context and why ${requirement.label} was crucial.\n- Outline specific design decisions made.\n- Quantify or qualify the outcome and lessons learned.`,
-      prep_seconds: 45,
-      answer_seconds: 120
-    }));
+    // 3. Draft core questions from the parsed JD's must-have requirements --
+    // one genuine, non-templated question per requirement (see coreQuestions.ts).
+    const drafts = await generateCoreQuestions(parsedJD);
 
     // 4. Bulk-insert core questions into Neon database
-    for (const q of mockQuestions) {
+    let position = 1;
+    for (const q of drafts) {
       await sqlQuery(
         `INSERT INTO core_questions (job_id, position, competency, text, ideal_answer, prep_seconds, answer_seconds)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [
-          job.id,
-          q.position,
-          q.competency,
-          q.text,
-          q.ideal_answer,
-          q.prep_seconds,
-          q.answer_seconds
-        ]
+        [job.id, position++, q.competency, q.text, q.idealAnswer, 45, 120]
       );
     }
 

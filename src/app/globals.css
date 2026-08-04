@@ -2,55 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
-/*
- * Design tokens ported from ABtalksapp (the main website this app will
- * eventually be merged into) so the two share a visual language ahead of
- * that merge. Token values only -- not ABtalksapp's shadcn/Base UI component
- * library or Tailwind v4 tooling, which are out of scope here.
- */
-:root {
-  --background: 38 38% 98%;
-  --foreground: 224 71% 4%;
-  --card: 0 0% 100%;
-  --card-foreground: 224 71% 4%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 224 71% 4%;
-  --primary: 239 84% 67%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 220 14% 96%;
-  --secondary-foreground: 224 71% 4%;
-  --muted: 220 14% 96%;
-  --muted-foreground: 220 8% 46%;
-  --accent: 220 14% 96%;
-  --accent-foreground: 224 71% 4%;
-  --destructive: 0 72% 51%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 220 13% 91%;
-  --input: 220 13% 91%;
-  --ring: 239 84% 67%;
-  --radius: 0.625rem;
-}
+@layer base {
+  :root {
+    /* ABTalks Dark Theme */
+    --background: 246 75% 14%;           /* #100A3D deep navy */
+    --foreground: 0 0% 100%;             /* white */
 
-.dark {
-  --background: 224 71% 4%;
-  --foreground: 0 0% 98%;
-  --card: 224 71% 6%;
-  --card-foreground: 0 0% 98%;
-  --popover: 224 71% 6%;
-  --popover-foreground: 0 0% 98%;
-  --primary: 239 84% 67%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 215 28% 17%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 215 28% 17%;
-  --muted-foreground: 217 11% 65%;
-  --accent: 215 28% 17%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 63% 31%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 215 28% 17%;
-  --input: 215 28% 17%;
-  --ring: 239 84% 67%;
+    --card: 240 37% 17%;                 /* #191B40 */
+    --card-foreground: 0 0% 100%;
+
+    --popover: 240 37% 17%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 248 63% 55%;              /* #7364E6 indigo */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 252 37% 25%;            /* #2C1BA9 deep indigo */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 240 37% 17%;
+    --muted-foreground: 0 0% 70%;        /* white/70 */
+
+    --accent: 252 37% 36%;               /* #403880 */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 252 68% 38%;               /* #2C1BA9 */
+    --input: 252 68% 38%;
+    --ring: 248 63% 55%;
+
+    --radius: 0.625rem;                  /* 10px like ABTalks */
+  }
 }
 
 @layer base {
@@ -58,6 +42,59 @@
     border-color: hsl(var(--border));
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ABTalks-style button interactions */
+@layer utilities {
+  .btn-abtalks {
+    transition: all 0.2s ease;
+  }
+  .btn-abtalks:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 14px rgba(115, 100, 230, 0.3);
+  }
+  .btn-abtalks:active {
+    transform: scale(0.99);
+  }
+
+  /* Gradient CTA (orange-pink like ABTalks primary action) */
+  .btn-gradient {
+    background: linear-gradient(to right, #f97316, #ec4899);
+    color: white;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+  .btn-gradient:hover {
+    background: linear-gradient(to right, #ea580c, #db2777);
+    transform: scale(1.02);
+    box-shadow: 0 4px 20px rgba(249, 115, 22, 0.35);
+  }
+  .btn-gradient:active {
+    transform: scale(0.99);
+  }
+
+  /* Card gradient like ABTalks */
+  .card-abtalks {
+    background: linear-gradient(135deg, #191B40 0%, #2a2d5e 100%);
+    border: 1px solid #2C1BA9;
+  }
+
+  /* Glow effect for live elements */
+  .glow-indigo {
+    box-shadow: 0 0 20px rgba(115, 100, 230, 0.25);
+  }
+
+  /* Text opacity helpers matching ABTalks hierarchy */
+  .text-white-70 {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  .text-white-50 {
+    color: rgba(255, 255, 255, 0.5);
   }
 }

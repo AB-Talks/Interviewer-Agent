@@ -258,30 +258,32 @@ export default function SystemCheckPage({
 
   if (!consentChecked) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center">
-        <span className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4" />
-        <p className="text-sm text-muted-foreground">Checking your session...</p>
+      <div className="flex-1 flex flex-col items-center justify-center">
+        <span className="w-8 h-8 border-4 border-[#7364E6]/30 border-t-[#7364E6] rounded-full animate-spin mb-4" />
+        <p className="text-sm text-white-70">Checking your session...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground py-12 px-6 flex flex-col justify-center items-center font-sans">
-      <div className="w-full max-w-4xl bg-card border border-border rounded-3xl p-8 shadow-xl space-y-8">
-        <div>
-          <span className="text-xs font-bold tracking-widest text-primary uppercase">
+    <div className="flex-1 py-12 px-6 flex flex-col justify-center items-center">
+      <div className="w-full max-w-4xl card-abtalks rounded-2xl p-8 space-y-8 relative">
+        {/* Background glow */}
+        <div className="absolute -top-20 -right-20 w-60 h-60 bg-[#7364E6]/10 rounded-full blur-[80px] pointer-events-none" />
+        <div className="relative z-10">
+          <span className="text-xs font-bold tracking-widest text-[#7364E6] uppercase">
             Step 2 of 3
           </span>
-          <h1 className="font-display text-3xl font-extrabold mt-2">
+          <h1 className="font-display text-3xl font-extrabold mt-2 text-white">
             System Check
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <p className="text-white-70 text-sm mt-1">
             Check your camera and microphone before the live AI interview call — best on a laptop in a quiet room.
           </p>
         </div>
 
         {permissionError && (
-          <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/25 text-destructive text-sm leading-relaxed">
+          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-sm leading-relaxed">
             {permissionError}
           </div>
         )}
@@ -289,7 +291,7 @@ export default function SystemCheckPage({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Left panel: Video Preview and Controls */}
           <div className="space-y-6">
-            <div className="relative aspect-video rounded-2xl overflow-hidden bg-muted border border-border shadow-inner flex items-center justify-center">
+            <div className="relative aspect-video rounded-xl overflow-hidden bg-[#191B40] border border-[#2C1BA9]/50 shadow-inner flex items-center justify-center">
               {testBlobUrl ? (
                 <video
                   src={testBlobUrl}
@@ -317,13 +319,13 @@ export default function SystemCheckPage({
 
             {/* Mic Audio Meter Indicator */}
             <div className="space-y-2">
-              <div className="flex justify-between text-xs font-semibold text-muted-foreground">
+              <div className="flex justify-between text-xs font-semibold text-white-50">
                 <span>Microphone Level Indicator</span>
                 <span>{micLevel}%</span>
               </div>
-              <div className="w-full h-2 bg-muted rounded-full overflow-hidden border border-border">
+              <div className="w-full h-2 bg-[#191B40] rounded-full overflow-hidden border border-[#2C1BA9]/50">
                 <div
-                  className="h-full bg-primary transition-all duration-75"
+                  className="h-full bg-[#7364E6] transition-all duration-75"
                   style={{ width: `${micLevel}%` }}
                 />
               </div>
@@ -334,7 +336,7 @@ export default function SystemCheckPage({
           <div className="space-y-6 flex flex-col justify-between">
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-white-50 mb-2">
                   Select Camera
                 </label>
                 <select
@@ -344,7 +346,7 @@ export default function SystemCheckPage({
                     setSelectedCamera(e.target.value);
                     handleDeviceChange(e.target.value, selectedMic);
                   }}
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm focus:outline-none focus:border-ring transition-colors"
+                  className="w-full bg-[#191B40] border border-[#2C1BA9]/50 rounded-[10px] px-4 py-3 text-white text-sm focus:outline-none focus:border-[#7364E6] transition-colors"
                 >
                   {cameras.map((c) => (
                     <option key={c.deviceId} value={c.deviceId}>
@@ -355,7 +357,7 @@ export default function SystemCheckPage({
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-white-50 mb-2">
                   Select Microphone
                 </label>
                 <select
@@ -365,7 +367,7 @@ export default function SystemCheckPage({
                     setSelectedMic(e.target.value);
                     handleDeviceChange(selectedCamera, e.target.value);
                   }}
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground text-sm focus:outline-none focus:border-ring transition-colors"
+                  className="w-full bg-[#191B40] border border-[#2C1BA9]/50 rounded-[10px] px-4 py-3 text-white text-sm focus:outline-none focus:border-[#7364E6] transition-colors"
                 >
                   {mics.map((m) => (
                     <option key={m.deviceId} value={m.deviceId}>
@@ -381,7 +383,7 @@ export default function SystemCheckPage({
                 type="button"
                 disabled={testRecording || loadingDevices}
                 onClick={startTestRecording}
-                className="w-full py-3.5 bg-secondary hover:bg-accent disabled:opacity-50 text-secondary-foreground border border-border rounded-xl text-sm font-semibold transition-all"
+                className="w-full py-3.5 bg-[#403880] hover:bg-[#504898] disabled:opacity-50 text-white border border-[#2C1BA9] rounded-[10px] text-sm font-semibold btn-abtalks"
               >
                 {testBlobUrl ? "Record Again" : "Record 5s Test Clip"}
               </button>
@@ -393,13 +395,13 @@ export default function SystemCheckPage({
                   stopAllMedia();
                   router.push(`/i/${token}/interview`);
                 }}
-                className="w-full py-4 bg-primary hover:opacity-90 disabled:opacity-50 rounded-xl transition-all text-primary-foreground font-bold shadow-lg flex items-center justify-center gap-2"
+                className="w-full py-4 rounded-[10px] btn-gradient disabled:opacity-50 font-bold flex items-center justify-center gap-2"
               >
-                Start Interview
+                Start Interview →
               </button>
 
               {!testBlobUrl && (
-                <p className="text-center text-xs text-muted-foreground">
+                <p className="text-center text-xs text-white-50">
                   Please record and play back a test clip to verify video & audio before proceeding.
                 </p>
               )}

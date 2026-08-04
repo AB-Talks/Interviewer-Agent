@@ -15,7 +15,12 @@ const bodySchema = z.object({
     email: z.string().email(),
     phone: z.string().optional(),
   }),
-  resumeFilePath: z.string().min(1),
+  // Raw resume text, pasted the same way a JD is pasted -- there's no
+  // file-upload/PDF-extraction pipeline in this app (a new dependency, out of
+  // scope without asking). resumeFilePath is kept as an optional record label
+  // only (e.g. the original filename), never parsed.
+  resumeText: z.string().min(1),
+  resumeFilePath: z.string().optional(),
 });
 
 // POST /api/interviews/create
@@ -35,7 +40,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const { jobId, candidate, resumeFilePath } = parsed.data;
+    const { jobId, candidate, resumeText, resumeFilePath } = parsed.data;
 
     const jobRes = await sqlQuery("SELECT * FROM jobs WHERE id = $1", [jobId]);
     const job = jobRes.rows[0];
@@ -61,16 +66,18 @@ export async function POST(request: Request) {
     }
 
     const candidateRes = await sqlQuery(
-      `INSERT INTO candidates (full_name, email, phone) VALUES ($1, $2, $3) RETURNING *`,
+      `INSERT INTO candidates (full_name, email, phone) VALUES ($1, $2, $3)
+       ON CONFLICT (email) DO UPDATE SET full_name = EXCLUDED.full_name, phone = EXCLUDED.phone
+       RETURNING *`,
       [candidate.fullName, candidate.email, candidate.phone ?? null],
     );
     const candidateRow = candidateRes.rows[0];
 
-    const parsedResume = await parseResume(resumeFilePath);
+    const parsedResume = await parseResume(resumeText);
     const resumeRes = await sqlQuery(
       `INSERT INTO resumes (candidate_id, file_path, parsed, parser_version)
        VALUES ($1, $2, $3, $4) RETURNING *`,
-      [candidateRow.id, resumeFilePath, JSON.stringify(parsedResume), "adapter-mock-v1"],
+      [candidateRow.id, resumeFilePath ?? "pasted-text", JSON.stringify(parsedResume), "gemini-v1"],
     );
     const resumeRow = resumeRes.rows[0];
 
@@ -99,7 +106,7 @@ export async function POST(request: Request) {
         JSON.stringify(matchReport.dimensionScores),
         JSON.stringify(matchReport.gaps),
         JSON.stringify(matchReport.verifiableClaims),
-        "adapter-mock-v1",
+        "deterministic-v1",
       ],
     );
     const matchReportRow = matchReportRes.rows[0];

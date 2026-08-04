@@ -35,17 +35,20 @@ function extractFirstJson(text: string): string | null {
 export async function askGeminiJson<T>({
   system,
   user,
+  maxTokens,
 }: {
   system: string;
   user: string;
+  maxTokens?: number;
 }): Promise<GeminiResult<T>> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return { ok: false, message: "Gemini API key is not configured." };
   }
 
-  // We use the Gemini 2.0 Flash model which is fast and supports JSON mode
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  // gemini-2.0-flash has zero free-tier quota on some keys; 2.5-flash works.
+  const model = process.env.INTERVIEW_GEMINI_MODEL ?? "gemini-2.5-flash";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
   try {
     const res = await fetch(url, {
@@ -66,6 +69,14 @@ export async function askGeminiJson<T>({
         ],
         generationConfig: {
           responseMimeType: "application/json",
+          // gemini-2.5-flash spends part of maxOutputTokens on invisible
+          // "thinking" before writing the visible response -- for these
+          // short extraction/generation tasks that reasoning is pure
+          // overhead, and a tight token budget lets it eat the whole
+          // response, leaving nothing (or a truncated object) behind.
+          // Disabling it keeps the full budget for the actual JSON output.
+          thinkingConfig: { thinkingBudget: 0 },
+          ...(maxTokens ? { maxOutputTokens: maxTokens } : {}),
         },
       }),
       signal: AbortSignal.timeout(20000),

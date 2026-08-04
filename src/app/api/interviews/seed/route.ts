@@ -90,7 +90,7 @@ export async function GET() {
     for (const probeText of mockProbes) {
       await sqlQuery(
         `INSERT INTO interview_questions (interview_id, position, kind, text, competency, prep_seconds, answer_seconds)
-         VALUES ($1, $2, $3, $4, $5, 30, 90)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [interview.id, position++, "probe", probeText, "frameworks", 30, 90]
       );
     }

@@ -169,66 +169,66 @@ export default function InterviewReviewPage({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <span className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+      <div className="flex-1 flex items-center justify-center">
+        <span className="w-8 h-8 border-4 border-[#7364E6]/30 border-t-[#7364E6] rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!interview) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
-        <p className="text-destructive">{error || "Interview not found."}</p>
+      <div className="flex-1 flex items-center justify-center p-6">
+        <p className="text-red-400">{error || "Interview not found."}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground py-10 px-6 font-sans">
-      <div className="max-w-5xl mx-auto space-y-8">
+    <div className="flex-1 py-10 px-6 relative">
+      <div className="max-w-5xl mx-auto space-y-8 relative z-10">
         {/* Header */}
-        <div className="bg-card border border-border rounded-3xl p-6 md:p-8 space-y-4">
+        <div className="card-abtalks rounded-2xl p-6 md:p-8 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="font-display text-2xl font-bold">{interview.candidate_name}</h1>
-              <p className="text-muted-foreground text-sm">
+              <h1 className="font-display text-2xl font-bold text-white">{interview.candidate_name}</h1>
+              <p className="text-white-70 text-sm">
                 {interview.candidate_email} &middot; {interview.job_title}
               </p>
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-secondary text-secondary-foreground border border-border">
+            <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-[#191B40] text-white border border-[#2C1BA9]/50">
               {interview.status}
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-            <div className="rounded-2xl border border-border bg-secondary p-4">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground">Core Score</span>
+            <div className="rounded-xl border border-[#2C1BA9]/50 bg-[#191B40] p-4">
+              <span className="text-xs uppercase tracking-wider text-white-50">Core Score</span>
               <p className={`font-display text-3xl font-bold ${scoreColor(interview.core_score)}`}>
                 {interview.core_score !== null ? Math.round(interview.core_score) : "—"}
-                <span className="text-base text-muted-foreground">/100</span>
+                <span className="text-base text-white-50">/100</span>
               </p>
             </div>
-            <div className="rounded-2xl border border-border bg-secondary p-4">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground">
+            <div className="rounded-xl border border-[#2C1BA9]/50 bg-[#191B40] p-4">
+              <span className="text-xs uppercase tracking-wider text-white-50">
                 Resume Match <span className="normal-case">(not part of interview score)</span>
               </span>
-              <p className="font-display text-3xl font-bold text-muted-foreground">
+              <p className="font-display text-3xl font-bold text-white-70">
                 {interview.overall_match !== null ? Math.round(interview.overall_match) : "—"}
                 <span className="text-base">%</span>
               </p>
             </div>
-            <div className="rounded-2xl border border-border bg-secondary p-4">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground">Integrity Score</span>
+            <div className="rounded-xl border border-[#2C1BA9]/50 bg-[#191B40] p-4">
+              <span className="text-xs uppercase tracking-wider text-white-50">Integrity Score</span>
               <p className={`font-display text-3xl font-bold ${scoreColor(interview.integrity_score)}`}>
                 {interview.integrity_score !== null ? Math.round(interview.integrity_score) : "—"}
-                <span className="text-base text-muted-foreground">/100</span>
+                <span className="text-base text-white-50">/100</span>
               </p>
             </div>
           </div>
 
           {interview.recommendation && (
-            <div className="text-sm text-muted-foreground pt-1">
-              Decision: <span className="font-semibold text-foreground capitalize">{interview.recommendation}</span>
+            <div className="text-sm text-white-70 pt-1">
+              Decision: <span className="font-semibold text-white capitalize">{interview.recommendation}</span>
               {interview.reviewed_by && ` by ${interview.reviewed_by}`}
               {interview.reviewed_at && ` on ${new Date(interview.reviewed_at).toLocaleString()}`}
               {interview.review_note && <> — &ldquo;{interview.review_note}&rdquo;</>}
@@ -239,7 +239,7 @@ export default function InterviewReviewPage({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Video + proctor timeline */}
           <div className="space-y-4">
-            <div className="bg-card border border-border rounded-3xl p-4 space-y-3">
+            <div className="card-abtalks rounded-2xl p-4 space-y-3">
               {segments.length > 0 ? (
                 <>
                   <video
@@ -247,14 +247,14 @@ export default function InterviewReviewPage({
                     key={segments[segmentIndex]?.url}
                     src={segments[segmentIndex]?.url}
                     controls
-                    className="w-full rounded-2xl bg-black aspect-video"
+                    className="w-full rounded-xl bg-black aspect-video"
                     onEnded={() => setSegmentIndex((i) => Math.min(i + 1, segments.length - 1))}
                   />
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center justify-between text-xs text-white-50">
                     <button
                       onClick={() => setSegmentIndex((i) => Math.max(0, i - 1))}
                       disabled={segmentIndex === 0}
-                      className="px-3 py-1.5 rounded-lg bg-secondary disabled:opacity-40"
+                      className="px-3 py-1.5 rounded-lg bg-[#191B40] border border-[#2C1BA9]/50 hover:bg-[#2C1BA9]/30 transition-colors disabled:opacity-40 text-white"
                     >
                       Prev part
                     </button>
@@ -264,33 +264,33 @@ export default function InterviewReviewPage({
                     <button
                       onClick={() => setSegmentIndex((i) => Math.min(segments.length - 1, i + 1))}
                       disabled={segmentIndex === segments.length - 1}
-                      className="px-3 py-1.5 rounded-lg bg-secondary disabled:opacity-40"
+                      className="px-3 py-1.5 rounded-lg bg-[#191B40] border border-[#2C1BA9]/50 hover:bg-[#2C1BA9]/30 transition-colors disabled:opacity-40 text-white"
                     >
                       Next part
                     </button>
                   </div>
                 </>
               ) : (
-                <div className="aspect-video rounded-2xl bg-muted flex items-center justify-center text-sm text-muted-foreground">
+                <div className="aspect-video rounded-xl bg-[#191B40] border border-[#2C1BA9]/50 flex items-center justify-center text-sm text-white-50">
                   No recording available.
                 </div>
               )}
             </div>
 
-            <div className="bg-card border border-border rounded-3xl p-6 space-y-3">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+            <div className="card-abtalks rounded-2xl p-6 space-y-3">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-white-50">
                 Proctor Timeline ({proctorEvents.length})
               </h2>
               {proctorEvents.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No events logged.</p>
+                <p className="text-sm text-white-70">No events logged.</p>
               ) : (
                 <ul className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
                   {proctorEvents.map((e) => (
                     <li key={e.id} className="flex items-center justify-between text-xs gap-2">
-                      <span className="text-muted-foreground shrink-0">
+                      <span className="text-white-50 shrink-0">
                         {new Date(e.at).toLocaleTimeString()}
                       </span>
-                      <span className="flex-1 text-foreground">{e.type.replace(/_/g, " ")}</span>
+                      <span className="flex-1 text-white">{e.type.replace(/_/g, " ")}</span>
                       <span className={`px-2 py-0.5 rounded-full font-semibold shrink-0 ${SEVERITY_CLASS[e.severity] ?? ""}`}>
                         {SEVERITY_LABEL[e.severity] ?? e.severity}
                       </span>
@@ -298,33 +298,33 @@ export default function InterviewReviewPage({
                   ))}
                 </ul>
               )}
-              <p className="text-xs text-muted-foreground pt-1">
+              <p className="text-xs text-white-50 pt-1">
                 Advisory only — proctoring signals never auto-reject a candidate.
               </p>
             </div>
           </div>
 
           {/* Transcript */}
-          <div className="bg-card border border-border rounded-3xl p-6 space-y-3">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Transcript</h2>
+          <div className="card-abtalks rounded-2xl p-6 space-y-3">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-white-50">Transcript</h2>
             {!interview.transcript || interview.transcript.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No transcript available.</p>
+              <p className="text-sm text-white-70">No transcript available.</p>
             ) : (
               <ul className="space-y-3 max-h-[32rem] overflow-y-auto pr-1">
                 {interview.transcript.map((line, i) => (
                   <li key={i}>
                     <button
                       onClick={() => seekToTranscriptLine(line)}
-                      className="text-left w-full rounded-xl px-3 py-2 hover:bg-accent transition-colors"
+                      className="text-left w-full rounded-xl px-3 py-2 hover:bg-[#191B40] transition-colors"
                     >
                       <span
                         className={`text-xs font-bold uppercase tracking-wider ${
-                          line.role === "ai" ? "text-primary" : "text-muted-foreground"
+                          line.role === "ai" ? "text-[#7364E6]" : "text-white-50"
                         }`}
                       >
                         {line.role === "ai" ? "Interviewer" : "Candidate"}
                       </span>
-                      <p className="text-sm mt-0.5">{line.text}</p>
+                      <p className="text-sm mt-0.5 text-white/90">{line.text}</p>
                     </button>
                   </li>
                 ))}
@@ -335,39 +335,39 @@ export default function InterviewReviewPage({
 
         {/* Core questions */}
         <div className="space-y-4">
-          <h2 className="font-display text-xl font-bold">Core Questions</h2>
+          <h2 className="font-display text-xl font-bold text-white">Core Questions</h2>
           {coreQuestions.map((q) => (
-            <div key={q.id} className="bg-card border border-border rounded-3xl p-6 space-y-3">
+            <div key={q.id} className="card-abtalks rounded-2xl p-6 space-y-3">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-primary">{q.competency}</span>
-                  <p className="font-medium mt-1">{q.text}</p>
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#7364E6]">{q.competency}</span>
+                  <p className="font-medium mt-1 text-white">{q.text}</p>
                 </div>
                 <span className={`font-display text-2xl font-bold shrink-0 ${scoreColor(q.score !== null ? Number(q.score) * 20 : null)}`}>
                   {q.score !== null ? Number(q.score).toFixed(1) : "—"}
-                  <span className="text-sm text-muted-foreground">/5</span>
+                  <span className="text-sm text-white-50">/5</span>
                 </span>
               </div>
               {q.subscores && (
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(q.subscores).map(([k, v]) => (
-                    <span key={k} className="text-xs px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground">
+                    <span key={k} className="text-xs px-2.5 py-1 rounded-full bg-[#191B40] border border-[#2C1BA9]/50 text-white-70">
                       {k}: {v}/5
                     </span>
                   ))}
                 </div>
               )}
-              {q.feedback && <p className="text-sm text-muted-foreground">{q.feedback}</p>}
+              {q.feedback && <p className="text-sm text-white-70">{q.feedback}</p>}
               {q.evidence_quotes && q.evidence_quotes.length > 0 && (
                 <div className="space-y-1">
                   {q.evidence_quotes.map((quote, i) => (
-                    <p key={i} className="text-sm italic text-muted-foreground border-l-2 border-primary/40 pl-3">
+                    <p key={i} className="text-sm italic text-white-50 border-l-2 border-[#7364E6]/40 pl-3">
                       &ldquo;{quote}&rdquo;
                     </p>
                   ))}
                 </div>
               )}
-              {q.score === null && <p className="text-xs text-muted-foreground">Not yet evaluated (or insufficient evidence).</p>}
+              {q.score === null && <p className="text-xs text-white-50">Not yet evaluated (or insufficient evidence).</p>}
             </div>
           ))}
         </div>
@@ -375,27 +375,27 @@ export default function InterviewReviewPage({
         {/* Probe questions */}
         {probeQuestions.length > 0 && (
           <div className="space-y-4">
-            <h2 className="font-display text-xl font-bold">Probe Questions — Evidence for Review</h2>
+            <h2 className="font-display text-xl font-bold text-white">Probe Questions — Evidence for Review</h2>
             {probeQuestions.map((q) => (
-              <div key={q.id} className="bg-card border border-border rounded-3xl p-6 space-y-2">
+              <div key={q.id} className="card-abtalks rounded-2xl p-6 space-y-2">
                 {q.source_ref && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-white-50">
                     {q.source_ref.type === "gap" ? "Gap check" : "Claim check"}: {q.source_ref.label}
                     {q.source_ref.reason ? ` — ${q.source_ref.reason}` : ""}
                     {q.source_ref.rationale ? ` (${q.source_ref.rationale})` : ""}
                   </p>
                 )}
-                <p className="font-medium">{q.text}</p>
+                <p className="font-medium text-white">{q.text}</p>
                 {q.corroboration && (
-                  <span className="inline-block text-xs px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground capitalize">
+                  <span className="inline-block text-xs px-2.5 py-1 rounded-full bg-[#191B40] border border-[#2C1BA9]/50 text-white-70 capitalize">
                     {q.corroboration.replace(/_/g, " ")}
                   </span>
                 )}
-                {q.feedback && <p className="text-sm text-muted-foreground">{q.feedback}</p>}
+                {q.feedback && <p className="text-sm text-white-70">{q.feedback}</p>}
                 {q.evidence_quotes && q.evidence_quotes.length > 0 && (
                   <div className="space-y-1">
                     {q.evidence_quotes.map((quote, i) => (
-                      <p key={i} className="text-sm italic text-muted-foreground border-l-2 border-primary/40 pl-3">
+                      <p key={i} className="text-sm italic text-white-50 border-l-2 border-[#7364E6]/40 pl-3">
                         &ldquo;{quote}&rdquo;
                       </p>
                     ))}
@@ -407,35 +407,35 @@ export default function InterviewReviewPage({
         )}
 
         {/* Decision */}
-        <div className="bg-card border border-border rounded-3xl p-6 md:p-8 space-y-4">
-          <h2 className="font-display text-xl font-bold">Decision</h2>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+        <div className="card-abtalks rounded-2xl p-6 md:p-8 space-y-4">
+          <h2 className="font-display text-xl font-bold text-white">Decision</h2>
+          {error && <p className="text-sm text-red-400">{error}</p>}
           <input
             type="text"
             value={reviewedBy}
             onChange={(e) => setReviewedBy(e.target.value)}
             placeholder="Your name"
-            className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-ring"
+            className="w-full bg-[#191B40] border border-[#2C1BA9]/50 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white-50 focus:outline-none focus:border-[#7364E6]"
           />
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Note (optional)"
             rows={3}
-            className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-ring resize-none"
+            className="w-full bg-[#191B40] border border-[#2C1BA9]/50 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white-50 focus:outline-none focus:border-[#7364E6] resize-none"
           />
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={() => submitDecision("advance")}
               disabled={deciding}
-              className="flex-1 py-3.5 bg-primary text-primary-foreground rounded-xl font-semibold hover:opacity-90 disabled:opacity-50"
+              className="flex-1 py-3.5 btn-gradient rounded-[10px] font-semibold disabled:opacity-50"
             >
               Advance
             </button>
             <button
               onClick={() => submitDecision("reject")}
               disabled={deciding}
-              className="flex-1 py-3.5 bg-secondary text-secondary-foreground border border-border rounded-xl font-semibold hover:bg-accent disabled:opacity-50"
+              className="flex-1 py-3.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-[10px] font-semibold hover:bg-red-500/30 transition-colors disabled:opacity-50"
             >
               Reject
             </button>

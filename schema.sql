@@ -89,7 +89,8 @@ CREATE TABLE IF NOT EXISTS interviews (
   -- decided, when -- this is the entire defence if a rejection is disputed):
   reviewed_by VARCHAR(255),
   reviewed_at TIMESTAMPTZ,
-  review_note TEXT
+  review_note TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Table: interview_questions
@@ -164,14 +165,22 @@ ALTER TABLE interviews
   ADD COLUMN IF NOT EXISTS session_mint_count INT DEFAULT 0,
   ADD COLUMN IF NOT EXISTS reviewed_by VARCHAR(255),
   ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS review_note TEXT;
+  ADD COLUMN IF NOT EXISTS review_note TEXT,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
 
 ALTER TABLE answers
   ADD COLUMN IF NOT EXISTS evidence_start_ms INT,
   ADD COLUMN IF NOT EXISTS evidence_end_ms INT;
 
-ALTER TABLE candidates
-  ADD CONSTRAINT candidates_email_key UNIQUE (email);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'candidates_email_key'
+  ) THEN
+    ALTER TABLE candidates
+      ADD CONSTRAINT candidates_email_key UNIQUE (email);
+  END IF;
+END $$;
 
 DO $$
 BEGIN

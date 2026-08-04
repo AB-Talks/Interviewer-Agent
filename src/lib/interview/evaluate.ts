@@ -1,5 +1,9 @@
 import { sqlQuery } from "@/lib/db";
-import { askClaudeJson } from "@/lib/anthropic";
+// TEMPORARY: OPENAI_API_KEY has no billing attached yet, so evaluation is
+// pointed at Gemini (lib/gemini.ts) for testing today. Swap back to
+// `askOpenAIJson` from "@/lib/openai" once OpenAI billing is set up --
+// CLAUDE.md's approved AI vendor is OpenAI only.
+import { askGeminiJson } from "@/lib/gemini";
 
 interface RubricDimension {
   key: string;
@@ -174,42 +178,8 @@ export async function evaluateInterview(
     `TRANSCRIPT:\n"""\n${transcriptText || "(empty transcript)"}\n"""`,
   ].join("\n\n");
 
-  let ai: { ok: boolean; data?: EvalResponse; message?: string };
-  const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
-
-  if (!hasApiKey) {
-    console.warn("[evaluate] Missing ANTHROPIC_API_KEY. Falling back to mock heuristic scores.");
-    const mockResults: EvalResultItem[] = questions.map((q) => {
-      if (q.kind === "core") {
-        const subscores: Record<string, number> = {};
-        const dims = rubric.dimensions ?? [];
-        for (const d of dims) {
-          // Heuristic score: random between 3 and 5 for demo purposes
-          subscores[d.key] = Math.floor(Math.random() * 3) + 3;
-        }
-        return {
-          questionId: q.id,
-          kind: "core",
-          subscores,
-          feedback: `Candidate answered the core question on ${q.competency || "competency"}. Discussed tradeoffs and practical constraints.`,
-          evidence_quotes: ["I would use design patterns for this", "performance is a key concern"],
-          insufficient_evidence: false
-        };
-      } else {
-        return {
-          questionId: q.id,
-          kind: "probe",
-          corroboration: "corroborated",
-          feedback: "Verified experience with specific reference to project experience.",
-          evidence_quotes: ["We completed that migration last year"]
-        };
-      }
-    });
-    ai = { ok: true, data: { results: mockResults } };
-  } else {
-    const response = await askClaudeJson<EvalResponse>({ system: SYSTEM_PROMPT, user, maxTokens: 3000 });
-    ai = response.ok ? { ok: true, data: response.data } : { ok: false, message: response.message };
-  }
+  const response = await askGeminiJson<EvalResponse>({ system: SYSTEM_PROMPT, user, maxTokens: 3000 });
+  const ai = response.ok ? { ok: true as const, data: response.data } : { ok: false as const, message: response.message };
 
   if (!ai.ok || !ai.data) {
     console.error("[evaluate] Evaluation call failed:", ai.message);
