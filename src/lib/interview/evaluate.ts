@@ -267,9 +267,21 @@ export async function evaluateInterview(
 
   const integrityScore = await computeIntegrityScore(interviewId);
 
+  // Decision Engine (advisory only): auto_qualified is computed in code from
+  // core_score vs. the job's own minimum_interview_score -- never a model
+  // judgment, never an auto-advance. A job with no threshold set (null)
+  // makes no auto-qualify decision at all (NULL, not false) -- every
+  // candidate then requires manual review, which is the safe default.
+  const minimumInterviewScore =
+    job.minimum_interview_score !== null && job.minimum_interview_score !== undefined
+      ? Number(job.minimum_interview_score)
+      : null;
+  const autoQualified =
+    minimumInterviewScore !== null && coreScore !== null ? coreScore >= minimumInterviewScore : null;
+
   await sqlQuery(
-    `UPDATE interviews SET core_score = $2, integrity_score = $3, evaluated_at = NOW(), status = 'scored' WHERE id = $1`,
-    [interviewId, coreScore, integrityScore],
+    `UPDATE interviews SET core_score = $2, integrity_score = $3, auto_qualified = $4, evaluated_at = NOW(), status = 'scored' WHERE id = $1`,
+    [interviewId, coreScore, integrityScore, autoQualified],
   );
 
   return { ok: true };

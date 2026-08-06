@@ -3,6 +3,9 @@ import { z } from "zod";
 import { createInterview } from "@/lib/interview/createInterview";
 import { extractTextFromFile } from "@/lib/files/extractText";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const formSchema = z.object({
   jobId: z.string().uuid(),
   fullName: z.string().min(1),
@@ -10,14 +13,22 @@ const formSchema = z.object({
   phone: z.string().optional(),
 });
 
-// POST /api/interviews/create
-// Public self-service route: candidates apply directly from
-// /jobs/[id]/apply, uploading their own resume. No auth -- a candidate
-// doesn't have an access_token yet, this route is what mints one. Job
-// eligibility (status === 'live') and match-threshold gating happen inside
-// createInterview.ts, which is the single intake chain shared with the
-// cross-app, secret-gated /api/integrations/abtalks/interviews route.
+// POST /api/integrations/abtalks/interviews
+// Cross-app trigger: an ABtalksapp admin, viewing a ready student, creates a
+// screening interview against an Interviewer-Agent job. Server-to-server only
+// (ABtalksapp's server action holds ABTALKS_INTEGRATION_SECRET, never the
+// browser). Same intake chain as the internal admin UI -- see createInterview.ts.
 export async function POST(request: Request) {
+  const configuredSecret = process.env.ABTALKS_INTEGRATION_SECRET;
+  if (!configuredSecret) {
+    console.error("[integrations/abtalks] ABTALKS_INTEGRATION_SECRET is not configured");
+    return NextResponse.json({ ok: false, message: "Integration is not configured." }, { status: 503 });
+  }
+  const providedSecret = request.headers.get("x-abtalks-integration-secret");
+  if (providedSecret !== configuredSecret) {
+    return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
+  }
+
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.includes("multipart/form-data")) {
     return NextResponse.json({ ok: false, message: "Expected a resume file upload." }, { status: 400 });
@@ -70,12 +81,13 @@ export async function POST(request: Request) {
       resumeFilePath: resume.name,
     });
     if (!result.ok) {
-      return NextResponse.json(
-        { ok: false, message: result.message, overallMatch: result.overallMatch },
-        { status: result.status },
-      );
+      return NextResponse.json({ ok: false, message: result.message }, { status: result.status });
     }
-    return NextResponse.json({ ok: true, interviewId: result.interviewId, token: result.token, url: result.url });
+    return NextResponse.json({
+      ok: true,
+      interviewId: result.interviewId,
+      url: `${process.env.INTERVIEWER_AGENT_PUBLIC_URL ?? ""}${result.url}`,
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ ok: false, message }, { status: 500 });

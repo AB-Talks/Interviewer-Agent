@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 export default function NewJobPage() {
   const router = useRouter();
   const [title, setTitle] = useState("");
-  const [seniority, setSeniority] = useState("mid");
   const [rawJD, setRawJD] = useState("");
+  const [jdFile, setJdFile] = useState<File | null>(null);
+  const [minimumInterviewScore, setMinimumInterviewScore] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -16,12 +17,20 @@ export default function NewJobPage() {
     setLoading(true);
     setError("");
 
+    if (!rawJD.trim() && !jdFile) {
+      setError("Paste the job description or upload a JD file.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await fetch("/api/jobs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, rawJD, seniority }),
-      });
+      const formData = new FormData();
+      formData.append("title", title);
+      if (rawJD.trim()) formData.append("rawJD", rawJD.trim());
+      if (jdFile) formData.append("jdFile", jdFile);
+      if (minimumInterviewScore) formData.append("minimumInterviewScore", minimumInterviewScore);
+
+      const res = await fetch("/api/jobs", { method: "POST", body: formData });
 
       const data = await res.json();
       if (!res.ok) {
@@ -73,32 +82,59 @@ export default function NewJobPage() {
 
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-white-50 mb-2">
-              Seniority Level
-            </label>
-            <select
-              value={seniority}
-              onChange={(e) => setSeniority(e.target.value)}
-              className="w-full bg-[#191B40] border border-[#2C1BA9]/50 rounded-[10px] px-4 py-3 text-white focus:outline-none focus:border-[#7364E6] transition-colors"
-            >
-              <option value="intern">Internship</option>
-              <option value="junior">Junior Developer</option>
-              <option value="mid">Mid-level Developer</option>
-              <option value="senior">Senior Developer</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-white-50 mb-2">
               Job Description (JD)
             </label>
             <textarea
-              required
               rows={8}
               value={rawJD}
               onChange={(e) => setRawJD(e.target.value)}
               placeholder="Paste the full job description details, responsibilities, and requirements here..."
               className="w-full bg-[#191B40] border border-[#2C1BA9]/50 rounded-[10px] px-4 py-3 text-white placeholder-white-50 focus:outline-none focus:border-[#7364E6] transition-colors resize-y"
             />
+            <p className="mt-2 text-xs text-white-50">
+              Seniority and requirements are extracted automatically from the JD text — no need to set them
+              by hand.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="flex-1 h-px bg-[#2C1BA9]/50" />
+            <span className="text-xs text-white-50 uppercase tracking-wider">or</span>
+            <span className="flex-1 h-px bg-[#2C1BA9]/50" />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-white-50 mb-2">
+              Upload JD File
+            </label>
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.txt"
+              onChange={(e) => setJdFile(e.target.files?.[0] ?? null)}
+              className="w-full rounded-xl border border-[#2C1BA9]/50 bg-[#191B40] px-3 py-2.5 text-sm text-white file:mr-4 file:rounded-lg file:border-0 file:bg-[#7364E6] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+            />
+            <p className="mt-2 text-[11px] text-white-50">
+              Accepts PDF, Word, or TXT. Uploading a file takes priority over pasted text above.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-white-50 mb-2">
+              Minimum Interview Score (optional)
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={minimumInterviewScore}
+              onChange={(e) => setMinimumInterviewScore(e.target.value)}
+              placeholder="e.g. 75 -- leave blank to require manual review for every candidate"
+              className="w-full bg-[#191B40] border border-[#2C1BA9]/50 rounded-[10px] px-4 py-3 text-white placeholder-white-50 focus:outline-none focus:border-[#7364E6] transition-colors"
+            />
+            <p className="mt-2 text-xs text-white-50">
+              Candidates scoring at or above this on the interview are flagged as auto-qualified for the recruiter
+              — advisory only, a human still makes the advance/reject call.
+            </p>
           </div>
 
           <button

@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS jobs (
   jd_raw TEXT,
   jd_parsed JSONB,                 -- ParsedJD JSON structure
   rubric JSONB NOT NULL,           -- Evaluation rubric
-  invite_threshold NUMERIC DEFAULT 60,
+  invite_threshold NUMERIC DEFAULT 60,     -- pre-interview gate: resume/JD match required to even be invited
+  minimum_interview_score NUMERIC,         -- post-interview gate: core_score required to auto-qualify (nullable = no auto-qualify decision made)
   status VARCHAR(50) DEFAULT 'draft', -- draft | questions_pending_review | live | closed
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -90,7 +91,22 @@ CREATE TABLE IF NOT EXISTS interviews (
   reviewed_by VARCHAR(255),
   reviewed_at TIMESTAMPTZ,
   review_note TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  -- Decision Engine (advisory only -- see CLAUDE.md): auto_qualified is
+  -- computed in code from core_score >= jobs.minimum_interview_score at
+  -- evaluation time. It does NOT auto-advance or auto-schedule anything on
+  -- its own -- a human recruiter still makes the advance/reject call via
+  -- interviews.recommendation. NULL means the job has no
+  -- minimum_interview_score set, so no auto-qualify decision was made.
+  auto_qualified BOOLEAN,
+  -- Pre-interview environment scan (system-check step): candidate pans the
+  -- camera around their surroundings before Start Interview unlocks. Content
+  -- is advisory-only for a human reviewer, same as all other proctoring
+  -- signals -- never auto-analyzed or auto-rejected.
+  room_scan_url TEXT,
+  student_id_value TEXT,
+  student_id_verified_at TIMESTAMPTZ,
+  student_id_snapshot_url TEXT
 );
 
 -- Table: interview_questions
@@ -166,7 +182,15 @@ ALTER TABLE interviews
   ADD COLUMN IF NOT EXISTS reviewed_by VARCHAR(255),
   ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS review_note TEXT,
-  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS auto_qualified BOOLEAN,
+  ADD COLUMN IF NOT EXISTS room_scan_url TEXT,
+  ADD COLUMN IF NOT EXISTS student_id_value TEXT,
+  ADD COLUMN IF NOT EXISTS student_id_verified_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS student_id_snapshot_url TEXT;
+
+ALTER TABLE jobs
+  ADD COLUMN IF NOT EXISTS minimum_interview_score NUMERIC;
 
 ALTER TABLE answers
   ADD COLUMN IF NOT EXISTS evidence_start_ms INT,

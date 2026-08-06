@@ -59,6 +59,10 @@ export async function POST(
     return NextResponse.json({ ok: false, message: "Consent required before starting." }, { status: 403 });
   }
 
+  if (!interview.student_id_verified_at) {
+    return NextResponse.json({ ok: false, message: "Student ID verification is required before starting." }, { status: 403 });
+  }
+
   if (interview.status !== "system_check" && interview.status !== "in_progress") {
     return NextResponse.json(
       { ok: false, message: `Interview is not startable from status "${interview.status}".` },

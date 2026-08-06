@@ -22,11 +22,10 @@ export default async function InterviewDonePage({
           ✓
         </div>
         <h1 className="font-display text-2xl md:text-3xl font-extrabold text-white">
-          Thank you{interview ? ` for completing your interview for ${interview.job_title}` : ""}
+          Interview submitted successfully
         </h1>
         <p className="text-white-70 text-sm leading-relaxed">
-          Your responses have been recorded and will be reviewed by the hiring team. A human
-          recruiter makes the final decision — you&apos;ll hear back from them directly.
+          {interview ? `Your AI Placement Interview for ${interview.job_title} has been submitted.` : "Your interview has been submitted."} If you progress to the next stage, you&apos;ll be notified by email.
         </p>
         <p className="text-xs text-white-50">
           You can safely close this window now.

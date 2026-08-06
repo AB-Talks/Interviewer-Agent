@@ -44,6 +44,12 @@ export default function RootLayout({
             </Link>
             <div className="flex items-center gap-4">
               <Link
+                href="/jobs"
+                className="text-sm font-medium text-white/60 hover:text-white transition-colors"
+              >
+                Browse Jobs
+              </Link>
+              <Link
                 href="/admin"
                 className="text-sm font-medium text-white/60 hover:text-white transition-colors"
               >

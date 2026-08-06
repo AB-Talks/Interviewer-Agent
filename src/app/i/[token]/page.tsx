@@ -31,6 +31,7 @@ export default function CandidateLandingPage({
   const [error, setError] = useState("");
   const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const interviewEstimate = "25-35 minutes";
 
   useEffect(() => {
     async function fetchDetails() {
@@ -111,19 +112,43 @@ export default function CandidateLandingPage({
       {/* Background glow */}
       <div className="fixed top-1/3 left-1/4 w-80 h-80 bg-[#7364E6]/10 rounded-full blur-[100px] pointer-events-none" />
 
-      <div className="w-full max-w-2xl card-abtalks rounded-2xl p-8 md:p-10 space-y-8 relative z-10">
-        <div>
-          <span className="text-xs font-bold tracking-widest text-[#7364E6] uppercase">
-            Invitation to Screen
-          </span>
-          <h1 className="font-display text-3xl md:text-4xl font-extrabold mt-2 text-white">
-            Welcome, {interview.candidate_name}
-          </h1>
-          <p className="text-white-70 mt-2">
-            You have been invited to complete a screening interview for the position of{" "}
-            <span className="text-[#7364E6] font-semibold">{interview.job_title}</span>
-            {interview.job_jd_parsed?.seniority ? ` (${interview.job_jd_parsed.seniority} level)` : ""}.
-          </p>
+      <div className="w-full max-w-3xl card-abtalks rounded-2xl p-8 md:p-10 space-y-8 relative z-10">
+        <div className="rounded-3xl border border-[#2C1BA9]/50 bg-gradient-to-br from-[#191B40] via-[#191B40] to-[#0E102A] p-6 md:p-8 space-y-6 shadow-[0_24px_80px_rgba(10,10,30,0.35)]">
+          <div className="space-y-3">
+            <span className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.28em] text-emerald-300">
+              Eligible for the AI Placement Interview
+            </span>
+            <h1 className="font-display text-3xl md:text-5xl font-extrabold text-white leading-tight">
+              Congratulations, {interview.candidate_name}
+            </h1>
+            <p className="max-w-2xl text-white/75 text-base md:text-lg leading-relaxed">
+              You are now eligible to begin the AI Placement Interview for{" "}
+              <span className="text-[#B8B0FF] font-semibold">{interview.job_title}</span>
+              {interview.job_jd_parsed?.seniority ? ` (${interview.job_jd_parsed.seniority} level)` : ""}. This interview helps us assess your readiness for real internship opportunities in a calm, structured format.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="rounded-2xl border border-[#2C1BA9]/50 bg-white/5 p-4">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-white/45">Estimated time</p>
+              <p className="mt-2 font-display text-2xl font-bold text-white">{interviewEstimate}</p>
+            </div>
+            <div className="rounded-2xl border border-[#2C1BA9]/50 bg-white/5 p-4">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-white/45">Format</p>
+              <p className="mt-2 font-display text-2xl font-bold text-white">Live AI interview</p>
+            </div>
+            <div className="rounded-2xl border border-[#2C1BA9]/50 bg-white/5 p-4">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-white/45">What to expect</p>
+              <p className="mt-2 font-display text-2xl font-bold text-white">12-15 questions</p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-[#2C1BA9]/50 bg-[#0F1230]/80 p-5 md:p-6">
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-white/45">Before you start</p>
+            <p className="mt-2 text-white/70 leading-relaxed">
+              Use a quiet room, keep your camera and microphone ready, and allow a few minutes for the setup checks before the interview begins.
+            </p>
+          </div>
         </div>
 
         {/* Role context -- what this interview is actually screening for */}
@@ -191,7 +216,7 @@ export default function CandidateLandingPage({
                 Stamping Consent...
               </>
             ) : (
-              "Proceed to System Check →"
+              "Start Your Interview Setup →"
             )}
           </button>
         </div>

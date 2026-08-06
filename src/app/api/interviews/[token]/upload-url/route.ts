@@ -43,7 +43,7 @@ export async function POST(
       body,
       request,
       onBeforeGenerateToken: async () => ({
-        allowedContentTypes: ["video/webm", "video/mp4"],
+        allowedContentTypes: ["video/webm", "video/mp4", "image/jpeg", "image/png"],
         addRandomSuffix: true,
         tokenPayload: JSON.stringify({ interviewId: interview.id }),
       }),

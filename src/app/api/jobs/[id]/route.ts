@@ -26,7 +26,7 @@ export async function GET(
     // the "eligibility" view for this job (mirrors an admin monitor page).
     const interviewsRes = await sqlQuery(
       `SELECT i.id, i.access_token, i.status, i.core_score, i.integrity_score,
-              i.created_at, i.recommendation,
+              i.created_at, i.recommendation, i.auto_qualified,
               c.full_name AS candidate_name, c.email AS candidate_email,
               mr.overall_match
        FROM interviews i

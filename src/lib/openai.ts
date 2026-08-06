@@ -17,6 +17,13 @@ type AskParams = {
   maxTokens?: number;
 };
 
+type VisionAskParams = {
+  system: string;
+  user: string;
+  imageUrl: string;
+  maxTokens?: number;
+};
+
 export type OpenAIJsonResult<T> =
   | { ok: true; data: T }
   | { ok: false; message: string };
@@ -91,6 +98,66 @@ export async function askOpenAIJson<T>({
     return { ok: true, data: JSON.parse(jsonSlice) as T };
   } catch (e) {
     console.error("[openai] call errored", e);
+    return { ok: false, message: "AI request errored." };
+  }
+}
+
+/**
+ * Single-shot OpenAI chat call that expects a JSON object back from a vision prompt.
+ */
+export async function askOpenAIVisionJson<T>({
+  system,
+  user,
+  imageUrl,
+  maxTokens = 1024,
+}: VisionAskParams): Promise<OpenAIJsonResult<T>> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    return { ok: false, message: "AI is not configured (missing OPENAI_API_KEY)." };
+  }
+  const model = process.env.INTERVIEW_OPENAI_VISION_MODEL ?? "gpt-4o-mini";
+
+  try {
+    const res = await fetch(OPENAI_CHAT_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        max_completion_tokens: maxTokens,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: system },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: user },
+              { type: "image_url", image_url: { url: imageUrl } },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      console.error("[openai] vision chat completion failed", res.status, errText.slice(0, 500));
+      return { ok: false, message: "AI request failed." };
+    }
+
+    const json = (await res.json()) as ChatCompletionResponse;
+    const text = json.choices?.[0]?.message?.content ?? "";
+    const jsonSlice = extractFirstJson(text) ?? (text.trim() ? text : null);
+    if (!jsonSlice) {
+      console.error("[openai] no JSON object in vision response");
+      return { ok: false, message: "AI returned an unexpected response." };
+    }
+
+    return { ok: true, data: JSON.parse(jsonSlice) as T };
+  } catch (e) {
+    console.error("[openai] vision call errored", e);
     return { ok: false, message: "AI request errored." };
   }
 }

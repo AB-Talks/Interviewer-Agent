@@ -52,12 +52,18 @@ interface InterviewDetail {
   core_score: number | null;
   integrity_score: number | null;
   overall_match: number | null;
+  auto_qualified: boolean | null;
+  minimum_interview_score: number | null;
   recommendation: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
   review_note: string | null;
   transcript: TranscriptLine[] | null;
   video_segments: VideoSegment[] | null;
+  room_scan_url: string | null;
+  student_id_value: string | null;
+  student_id_verified_at: string | null;
+  student_id_snapshot_url: string | null;
   duration_seconds: number | null;
   submitted_at: string | null;
   evaluated_at: string | null;
@@ -195,9 +201,21 @@ export default function InterviewReviewPage({
                 {interview.candidate_email} &middot; {interview.job_title}
               </p>
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-[#191B40] text-white border border-[#2C1BA9]/50">
-              {interview.status}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-[#191B40] text-white border border-[#2C1BA9]/50">
+                {interview.status}
+              </span>
+              {interview.auto_qualified === true && (
+                <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  Auto-qualified
+                </span>
+              )}
+              {interview.auto_qualified === false && (
+                <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                  Below minimum score
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
@@ -207,6 +225,11 @@ export default function InterviewReviewPage({
                 {interview.core_score !== null ? Math.round(interview.core_score) : "—"}
                 <span className="text-base text-white-50">/100</span>
               </p>
+              {interview.minimum_interview_score !== null && (
+                <p className="text-xs text-white-50 mt-1">
+                  Minimum to auto-qualify: {interview.minimum_interview_score}
+                </p>
+              )}
             </div>
             <div className="rounded-xl border border-[#2C1BA9]/50 bg-[#191B40] p-4">
               <span className="text-xs uppercase tracking-wider text-white-50">
@@ -276,6 +299,36 @@ export default function InterviewReviewPage({
                 </div>
               )}
             </div>
+
+            {interview.room_scan_url && (
+              <div className="card-abtalks rounded-2xl p-4 space-y-2">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-white-50">
+                  Room Scan <span className="normal-case text-white-50">(pre-interview, advisory)</span>
+                </h2>
+                <video src={interview.room_scan_url} controls className="w-full rounded-xl bg-black aspect-video" />
+              </div>
+            )}
+
+            {interview.student_id_verified_at && (
+              <div className="card-abtalks rounded-2xl p-4 space-y-3">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-white-50">
+                  Student ID Verification <span className="normal-case text-white-50">(automatic)</span>
+                </h2>
+                <div className="flex flex-wrap items-center gap-3 text-sm text-white-70">
+                  <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-emerald-300 font-semibold">
+                    Verified
+                  </span>
+                  {interview.student_id_value && <span>Student ID: {interview.student_id_value}</span>}
+                </div>
+                {interview.student_id_snapshot_url && (
+                  <img
+                    src={interview.student_id_snapshot_url}
+                    alt="Student ID verification snapshot"
+                    className="w-full rounded-xl bg-black aspect-video object-cover"
+                  />
+                )}
+              </div>
+            )}
 
             <div className="card-abtalks rounded-2xl p-6 space-y-3">
               <h2 className="text-sm font-bold uppercase tracking-wider text-white-50">

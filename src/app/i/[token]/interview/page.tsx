@@ -96,6 +96,8 @@ export default function LiveInterviewPage({
   const turnStateRef = useRef<TurnState | null>(null);
   const lastQuestionIdRef = useRef<string | null>(null);
   const recognitionRef = useRef<{ stop: () => void } | null>(null);
+  const questionIndex = Math.max(1, Math.ceil(transcriptCount / 2));
+  const questionTotal = 12;
 
   const proctorEnabled = phase === "ready" || phase === "connecting" || phase === "live";
   const { push: pushProctorEvent } = useProctor(token, proctorEnabled);
@@ -150,6 +152,10 @@ export default function LiveInterviewPage({
         const iv = data.interview;
         if (!iv.consent_at) {
           router.replace(`/i/${token}`);
+          return;
+        }
+        if (!iv.student_id_verified_at) {
+          router.replace(`/i/${token}/check`);
           return;
         }
         if (iv.status === "submitted" || iv.status === "scored") {
@@ -693,6 +699,23 @@ export default function LiveInterviewPage({
           For the best experience, use a laptop with headphones in a quiet room. This step is optimized for desktop.
         </div>
 
+        <div className="rounded-2xl border border-[#2C1BA9]/50 bg-gradient-to-br from-[#191B40] to-[#0F1230] p-5 md:p-6 space-y-4 shadow-[0_24px_80px_rgba(10,10,30,0.28)]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-[0.24em] text-[#A79BFF]">AI interviewer</span>
+              <h2 className="font-display text-2xl md:text-3xl font-extrabold text-white mt-2">
+                Hi! I&apos;m your AI interviewer today.
+              </h2>
+            </div>
+            <div className="rounded-full border border-[#2C1BA9]/50 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/70">
+              {questionIndex} / {questionTotal} questions
+            </div>
+          </div>
+          <p className="text-white/75 leading-relaxed max-w-3xl">
+            This interview is designed to feel like a real internship screening. Take a breath, answer in your own words, and I&apos;ll guide the conversation from there.
+          </p>
+        </div>
+
         {textPreviewMode && (
           <div className="rounded-[10px] border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 font-medium">
             PREVIEW MODE — Gemini-powered text conversation. No live voice yet; this is not the final candidate experience.
@@ -754,6 +777,41 @@ export default function LiveInterviewPage({
 
         {(phase === "ready" || phase === "connecting" || phase === "live" || phase === "ending") && (
           <div className="card-abtalks rounded-2xl p-6 md:p-8 space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                {
+                  label: "Listening",
+                  detail: "Capturing your response",
+                  active: phase === "live",
+                },
+                {
+                  label: "Transcribing",
+                  detail: "Turning speech into text",
+                  active: phase === "connecting" || phase === "live",
+                },
+                {
+                  label: "Thinking",
+                  detail: "Preparing the next question",
+                  active: phase === "connecting" || phase === "live" || phase === "ending",
+                },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className={`rounded-xl border p-4 transition-all ${
+                    item.active
+                      ? "border-[#7364E6]/40 bg-[#7364E6]/10 shadow-[0_0_0_1px_rgba(115,100,230,0.12)]"
+                      : "border-[#2C1BA9]/50 bg-[#191B40]/70"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-semibold text-white">{item.label}</span>
+                    <span className={`h-2.5 w-2.5 rounded-full ${item.active ? "bg-emerald-400 animate-pulse" : "bg-white/20"}`} />
+                  </div>
+                  <p className="mt-2 text-xs text-white/55 leading-relaxed">{item.detail}</p>
+                </div>
+              ))}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="relative aspect-video rounded-xl overflow-hidden bg-[#191B40] border border-[#2C1BA9]/50">
                 <video ref={localVideoElRef} autoPlay playsInline muted className="w-full h-full object-cover" />
@@ -774,28 +832,49 @@ export default function LiveInterviewPage({
                       <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
                       Session Active
                     </span>
+                    <p className="text-xs text-white-50">Question {questionIndex} of {questionTotal}</p>
                     <p className="text-xs text-white-50">{transcriptCount} conversation turns saved</p>
                   </div>
                 ) : (
-                  <p className="text-sm text-white-70">
-                    The interview will adapt to your background and responses.
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-sm text-white-70">
+                      The interview will adapt to your background and responses.
+                    </p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-white/45">
+                      {phase === "connecting" ? "Connecting to your interviewer" : phase === "ending" ? "Wrapping up your interview" : "Ready for the first question"}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
 
             {phase === "ready" && (
-              <button
-                onClick={() => void startInterview()}
-                className="w-full py-4 rounded-[10px] btn-gradient font-semibold"
-              >
-                Start Interview →
-              </button>
+              <div className="space-y-4">
+                <div className="rounded-xl border border-[#2C1BA9]/50 bg-[#191B40]/80 p-5 text-center space-y-2">
+                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/45">Start when you&apos;re ready</p>
+                  <p className="text-white/75 text-sm leading-relaxed">
+                    You can take a moment before answering. The conversation begins when you press start.
+                  </p>
+                </div>
+                <button
+                  onClick={() => void startInterview()}
+                  className="w-full py-4 rounded-[10px] btn-gradient font-semibold"
+                >
+                  Start Interview →
+                </button>
+              </div>
             )}
             {phase === "connecting" && (
-              <p className="text-center text-sm text-white-70">
-                {textPreviewMode ? "Preparing the preview..." : "Connecting to your interviewer..."}
-              </p>
+              <div className="space-y-3 rounded-xl border border-[#2C1BA9]/50 bg-[#191B40]/80 p-5 text-center">
+                <p className="text-sm text-white-70">
+                  {textPreviewMode ? "Preparing the preview..." : "Connecting to your interviewer..."}
+                </p>
+                <div className="grid grid-cols-3 gap-2 text-[11px] uppercase tracking-[0.18em] text-white/45">
+                  <span className="rounded-full border border-[#2C1BA9]/50 bg-white/5 px-3 py-2 text-emerald-300">Listening</span>
+                  <span className="rounded-full border border-[#2C1BA9]/50 bg-white/5 px-3 py-2 text-white/70 animate-pulse">Transcribing</span>
+                  <span className="rounded-full border border-[#2C1BA9]/50 bg-white/5 px-3 py-2 text-white/70">Thinking</span>
+                </div>
+              </div>
             )}
 
             {phase === "live" && textPreviewMode && currentTurn && (
@@ -841,16 +920,29 @@ export default function LiveInterviewPage({
             )}
 
             {phase === "live" && (
-              <button
-                onClick={() => void endInterview()}
-                disabled={!canEndManually}
-                className="w-full py-4 bg-[#403880] disabled:opacity-50 text-white border border-[#2C1BA9] rounded-[10px] font-semibold btn-abtalks"
-              >
-                End Interview
-              </button>
+              <div className="space-y-3">
+                <div className="rounded-xl border border-[#2C1BA9]/50 bg-[#191B40]/80 p-4 text-sm text-white-70 leading-relaxed">
+                  {textPreviewMode
+                    ? "Type your answer and continue the conversation."
+                    : "Your answer is being recorded. The interviewer may ask a follow-up based on what you say."}
+                </div>
+                <button
+                  onClick={() => void endInterview()}
+                  disabled={!canEndManually}
+                  className="w-full py-4 bg-[#403880] disabled:opacity-50 text-white border border-[#2C1BA9] rounded-[10px] font-semibold btn-abtalks"
+                >
+                  End Interview
+                </button>
+              </div>
             )}
             {phase === "ending" && (
-              <p className="text-center text-sm text-white-70">Saving your interview...</p>
+              <div className="rounded-xl border border-[#2C1BA9]/50 bg-[#191B40]/80 p-5 text-center space-y-3">
+                <p className="text-center text-sm text-white-70">Saving your interview...</p>
+                <div className="grid grid-cols-2 gap-2 text-[11px] uppercase tracking-[0.18em] text-white/45">
+                  <span className="rounded-full border border-[#2C1BA9]/50 bg-white/5 px-3 py-2 text-emerald-300 animate-pulse">Transcribing</span>
+                  <span className="rounded-full border border-[#2C1BA9]/50 bg-white/5 px-3 py-2 text-white/70 animate-pulse">Generating feedback</span>
+                </div>
+              </div>
             )}
           </div>
         )}

@@ -19,6 +19,7 @@ export async function GET(
 
   const interviewRes = await sqlQuery(
     `SELECT i.*, j.title AS job_title, j.rubric AS job_rubric,
+            j.minimum_interview_score,
             c.full_name AS candidate_name, c.email AS candidate_email,
             mr.overall_match, mr.gaps AS match_gaps, mr.verifiable_claims AS match_verifiable_claims
      FROM interviews i

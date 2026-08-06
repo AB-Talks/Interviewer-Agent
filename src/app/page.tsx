@@ -31,10 +31,10 @@ export default function Home() {
 
           <div className="pt-4 flex flex-col sm:flex-row justify-center items-center gap-4">
             <Link
-              href="/i/test-token"
+              href="/jobs"
               className="w-full sm:w-auto px-8 py-3.5 rounded-[10px] btn-gradient text-base font-semibold"
             >
-              Try Demo Interview →
+              Browse Open Roles →
             </Link>
             <Link
               href="/admin"

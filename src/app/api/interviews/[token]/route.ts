@@ -19,6 +19,8 @@ export async function GET(
     const res = await sqlQuery(
       `SELECT
         i.id, i.status, i.consent_at, i.started_at, i.expires_at,
+        i.student_id_value, i.student_id_verified_at, i.student_id_snapshot_url,
+        i.room_scan_url,
         j.title as job_title, j.jd_parsed as job_jd_parsed,
         c.full_name as candidate_name
        FROM interviews i

@@ -28,6 +28,7 @@ interface InterviewRow {
   core_score: number | null;
   integrity_score: number | null;
   recommendation: string | null;
+  auto_qualified: boolean | null;
   candidate_name: string;
   candidate_email: string;
   overall_match: number | null;
@@ -49,12 +50,8 @@ export default function JobDetailsPage({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  const [candidateName, setCandidateName] = useState("");
-  const [candidateEmail, setCandidateEmail] = useState("");
-  const [resumeText, setResumeText] = useState("");
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState("");
-  const [createdLink, setCreatedLink] = useState<{ url: string; match?: number } | null>(null);
+  const [applyUrl, setApplyUrl] = useState("");
+  const [linkCopied, setLinkCopied] = useState(false);
 
   async function loadJobData() {
     try {
@@ -74,37 +71,19 @@ export default function JobDetailsPage({
 
   useEffect(() => {
     loadJobData();
+    if (typeof window !== "undefined") {
+      setApplyUrl(`${window.location.origin}/jobs/${id}/apply`);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const handleCreateCandidate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreating(true);
-    setCreateError("");
-    setCreatedLink(null);
+  const handleCopyLink = async () => {
     try {
-      const res = await fetch("/api/interviews/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jobId: id,
-          candidate: { fullName: candidateName, email: candidateEmail },
-          resumeText,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.ok) {
-        throw new Error(data.message || "Could not create the interview.");
-      }
-      setCreatedLink({ url: data.url });
-      setCandidateName("");
-      setCandidateEmail("");
-      setResumeText("");
-      await loadJobData();
-    } catch (err: any) {
-      setCreateError(err.message);
-    } finally {
-      setCreating(false);
+      await navigator.clipboard.writeText(applyUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      // clipboard API unavailable -- link is still selectable text, no-op
     }
   };
 
@@ -280,80 +259,47 @@ export default function JobDetailsPage({
           ))}
         </div>
 
-        {/* Candidates & Eligibility */}
+        {/* Applicants & Eligibility */}
         <div className="space-y-6 border-t border-[#2C1BA9]/50 pt-8">
           <div>
-            <h2 className="text-xl font-bold text-white">Candidates &amp; Eligibility</h2>
+            <h2 className="text-xl font-bold text-white">Applicants &amp; Eligibility</h2>
             <p className="text-white-70 text-sm mt-1">
-              Add a candidate and paste their resume text — match score is computed against this job&apos;s
-              requirements (invite threshold: {job.invite_threshold}%). Eligible candidates get an interview
-              link automatically.
+              Candidates apply themselves — they upload their resume and are matched against this job&apos;s
+              requirements automatically (invite threshold: {job.invite_threshold}%). Anyone who clears the
+              bar gets sent straight to the interview.
             </p>
           </div>
 
-          {job.status !== "live" && (
+          {job.status !== "live" ? (
             <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-400 text-sm">
-              Approve the core questions above before adding candidates — a job must be live to invite anyone.
+              Approve the core questions above to publish this role — the public apply link only works once
+              the job is live.
+            </div>
+          ) : (
+            <div className="card-abtalks rounded-2xl p-6 space-y-3">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-white-50">
+                Public Apply Link
+              </label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  readOnly
+                  value={applyUrl}
+                  onFocus={(e) => e.target.select()}
+                  className="flex-1 bg-[#191B40] border border-[#2C1BA9]/50 rounded-xl px-4 py-2.5 text-white text-sm font-mono focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="px-5 py-2.5 rounded-[10px] bg-[#191B40] border border-[#2C1BA9]/50 hover:border-[#7364E6] transition-all text-white text-sm font-medium shrink-0"
+                >
+                  {linkCopied ? "Copied!" : "Copy Link"}
+                </button>
+              </div>
+              <p className="text-[11px] text-white-50">
+                Share this with candidates, or point them to the general <Link href="/jobs" className="underline hover:text-white">/jobs</Link> listing.
+              </p>
             </div>
           )}
-
-          <form onSubmit={handleCreateCandidate} className="card-abtalks rounded-2xl p-6 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white-50">
-                  Candidate Name
-                </label>
-                <input
-                  required
-                  value={candidateName}
-                  onChange={(e) => setCandidateName(e.target.value)}
-                  className="w-full bg-[#191B40] border border-[#2C1BA9]/50 focus:border-[#7364E6] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-1 focus:ring-[#7364E6]/30"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-white-50">Email</label>
-                <input
-                  required
-                  type="email"
-                  value={candidateEmail}
-                  onChange={(e) => setCandidateEmail(e.target.value)}
-                  className="w-full bg-[#191B40] border border-[#2C1BA9]/50 focus:border-[#7364E6] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-1 focus:ring-[#7364E6]/30"
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-white-50">
-                Resume Text
-              </label>
-              <textarea
-                required
-                rows={6}
-                value={resumeText}
-                onChange={(e) => setResumeText(e.target.value)}
-                placeholder="Paste the candidate's resume text here..."
-                className="w-full bg-[#191B40] border border-[#2C1BA9]/50 focus:border-[#7364E6] rounded-xl px-4 py-3 text-white placeholder:text-white-50 focus:outline-none focus:ring-1 focus:ring-[#7364E6]/30 resize-none text-sm"
-              />
-            </div>
-
-            {createError && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-400 text-sm">
-                {createError}
-              </div>
-            )}
-            {createdLink && (
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 text-sm break-all">
-                Eligible — interview created: <span className="font-mono">{createdLink.url}</span>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={creating || job.status !== "live"}
-              className="px-6 py-2.5 rounded-[10px] btn-gradient disabled:opacity-50 text-white text-sm font-semibold shadow-lg"
-            >
-              {creating ? "Checking eligibility..." : "Check Eligibility & Create Interview"}
-            </button>
-          </form>
 
           {interviews.length > 0 && (
             <div className="space-y-2">
@@ -375,6 +321,11 @@ export default function JobDetailsPage({
                     )}
                     {iv.core_score !== null && (
                       <span className="text-white-70">Score: {Math.round(iv.core_score)}/100</span>
+                    )}
+                    {iv.auto_qualified === true && (
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 uppercase tracking-wider font-semibold">
+                        Auto-qualified
+                      </span>
                     )}
                     <span className="px-2.5 py-0.5 rounded-full bg-[#191B40] border border-[#2C1BA9]/50 text-white-70 uppercase tracking-wider font-semibold">
                       {iv.status}
